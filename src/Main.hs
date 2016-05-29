@@ -44,7 +44,6 @@ import Data.Version
 
 import Debug.Trace
 
-import SrcLoc
 import Text.Read
 import Data.Char
 
@@ -193,13 +192,15 @@ runPipe Options{..} file = do
   let inp :: [(String, [Refactoring R.SrcSpan])] = read rawhints
       n = length inp
   when (verb == Loud) (traceM $ "Read " ++ show n ++ " hints")
-  let noOverlapInp = removeOverlap verb inp
-      refacts = (fmap . fmap . fmap) (toGhcSrcSpan file) <$> noOverlapInp
-
-      posFilter (_, rs) =
+  let posFilter (s, _) =
         case optionsPos of
-          Nothing -> True
-          Just p  -> any (flip spans p . pos) rs
+          Nothing    -> True
+          Just (l,c) -> ("hs:" ++ show l ++ ":" ++ show c ++ ":") `isInfixOf` s
+      noOverlapInp =
+        case optionsPos of
+          Nothing -> removeOverlap verb inp
+          Just _  -> inp
+      refacts = (fmap . fmap . fmap) (toGhcSrcSpan file) <$> noOverlapInp
       filtRefacts = filter posFilter refacts
 
 

@@ -69,13 +69,15 @@ applyRefactorings :: Maybe (Int, Int) -> [(String, [Refactoring R.SrcSpan])] -> 
 applyRefactorings optionsPos inp file = do
   (as, m) <- either (error . show) (uncurry applyFixities)
               <$> parseModuleWithOptions rigidLayout file
-  let noOverlapInp = removeOverlap Silent inp
-      refacts = (fmap . fmap . fmap) (toGhcSrcSpan file) <$> noOverlapInp
-
-      posFilter (_, rs) =
+  let posFilter (s, _) =
         case optionsPos of
-          Nothing -> True
-          Just p  -> any (flip spans p . pos) rs
+          Nothing    -> True
+          Just (l,c) -> ("hs:" ++ show l ++ ":" ++ show c ++ ":") `isInfixOf` s
+      noOverlapInp =
+        case optionsPos of
+          Nothing -> removeOverlap Silent inp
+          Just _  -> inp
+      refacts = (fmap . fmap . fmap) (toGhcSrcSpan file) <$> noOverlapInp
       filtRefacts = filter posFilter refacts
 
   -- need a check here to avoid overlap
